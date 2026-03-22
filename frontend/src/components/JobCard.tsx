@@ -3,7 +3,7 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/constants';
 import { formatEther, parseEther } from 'viem';
-import { Loader2, ExternalLink, ShieldCheck, Clock, CheckCircle, UserPlus, Wallet } from 'lucide-react';
+import { Loader2, ExternalLink, ShieldCheck, Clock, CheckCircle, UserPlus, Wallet, Star } from 'lucide-react';
 import Link from 'next/link';
 
 const JobStatusBadge = ({ status }: { status: number }) => {
@@ -37,13 +37,14 @@ const JobStatusBadge = ({ status }: { status: number }) => {
   }
 };
 
-export default function JobCard({ job }: { job: any }) {
+export default function JobCard({ job, onRate }: { job: any; onRate?: (jobId: number) => void }) {
   const { address } = useAccount();
   const { writeContract, data: hash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = 
     useWaitForTransactionReceipt({ hash });
 
   const isClient = address?.toLowerCase() === job.client.toLowerCase();
+  const isFreelancerFound = address?.toLowerCase() === job.freelancer.toLowerCase();
 
   const handleFund = () => {
     const amount = prompt('Enter amount in ETH to fund this job:');
@@ -93,20 +94,44 @@ export default function JobCard({ job }: { job: any }) {
           {job.description}
         </p>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-black/5 dark:bg-white/5 rounded-lg p-3">
-            <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Budget</span>
-            <span className="font-bold text-blue-600 dark:text-blue-400">{Number(formatEther(job.amount)).toFixed(7)} ETH</span>
+        {(isClient || isFreelancerFound) ? (
+          <>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-black/5 dark:bg-white/5 rounded-lg p-3">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Budget</span>
+                <span className="font-bold text-blue-600 dark:text-blue-400">{Number(formatEther(job.amount)).toFixed(7)} ETH</span>
+              </div>
+              <div className="bg-black/5 dark:bg-white/5 rounded-lg p-3 relative group/tip">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">
+                  {job.status >= 2 ? 'Deadline' : 'Freelancer'}
+                </span>
+                <span className="font-mono text-[10px] text-slate-600 dark:text-slate-300 truncate block">
+                  {job.status >= 2 
+                    ? new Date(Number(job.deadline) * 1000).toLocaleDateString()
+                    : job.freelancer === '0x0000000000000000000000000000000000000000' 
+                      ? 'Unassigned' 
+                      : `${job.freelancer.slice(0, 6)}...${job.freelancer.slice(-4)}`}
+                </span>
+              </div>
+            </div>
+
+            {job.status === 2 && (
+              <div className="mb-6 p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Time Left</span>
+                </div>
+                <span className="text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">
+                  {Math.ceil((Number(job.deadline) - Math.floor(Date.now() / 1000)) / 86400)} Days
+                </span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="mb-6 p-4 bg-slate-50 dark:bg-black/20 rounded-xl border border-dashed border-slate-200 dark:border-white/5">
+            <p className="text-[10px] text-slate-400 font-bold uppercase text-center italic">Project details restricted to participants</p>
           </div>
-          <div className="bg-black/5 dark:bg-white/5 rounded-lg p-3">
-            <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Freelancer</span>
-            <span className="font-mono text-[10px] text-slate-600 dark:text-slate-300 truncate block">
-              {job.freelancer === '0x0000000000000000000000000000000000000000' 
-                ? 'Unassigned' 
-                : `${job.freelancer.slice(0, 6)}...${job.freelancer.slice(-4)}`}
-            </span>
-          </div>
-        </div>
+        )}
       </div>
 
       <div className="flex gap-3">
@@ -136,7 +161,15 @@ export default function JobCard({ job }: { job: any }) {
             {isPending || isConfirming ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Complete & Pay'}
           </button>
         )}
-        {(job.status !== 0 || !isClient) && (
+        {job.status === 3 && onRate && (
+          <button 
+            onClick={() => onRate(Number(job.id))}
+            className="btn-secondary flex-1 py-3 text-sm flex items-center justify-center gap-2 border-yellow-500/50 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10"
+          >
+            <Star className="w-4 h-4" /> Rate Experience
+          </button>
+        )}
+        {(job.status !== 0 || !isClient) && job.status !== 3 && (
           <Link 
             href={`/jobs/${job.id}`} 
             className="p-3 border border-black/10 dark:border-white/10 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center justify-center"

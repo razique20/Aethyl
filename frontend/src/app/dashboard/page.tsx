@@ -4,10 +4,13 @@ import { useReadContract, useAccount } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/constants';
 import Navbar from '@/components/Navbar';
 import JobCard from '@/components/JobCard';
-import { Loader2, PlusCircle, LayoutDashboard, Bell } from 'lucide-react';
+import { Loader2, PlusCircle, LayoutDashboard, Bell, Star } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
+import ReviewForm from '@/components/ReviewForm';
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
+  const [selectedJobForReview, setSelectedJobForReview] = useState<number | null>(null);
 
   const { data: jobs, isLoading, error, refetch } = useReadContract({
     address: CONTRACT_ADDRESS,
@@ -59,7 +62,7 @@ export default function Dashboard() {
             <button onClick={() => refetch()} className="btn-secondary py-2 px-8">Retry Connection</button>
           </div>
         ) : (jobs as any[])?.length === 0 ? (
-          <div className="text-center py-32 glass border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
+          <div className="text-center py-32 solid-card border border-dashed border-black/10 dark:border-white/10 rounded-2xl">
             <p className="text-slate-500 dark:text-slate-400 mb-6">No jobs found in the marketplace yet.</p>
             <Link href="/jobs/create" className="text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 font-medium underline">
               Be the first to create one!
@@ -68,10 +71,20 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {(jobs as any[])?.map((job) => (
-              <JobCard key={Number(job.id)} job={job} />
+              <JobCard 
+                key={Number(job.id)} 
+                job={job} 
+                onRate={(jobId) => setSelectedJobForReview(jobId)}
+              />
             ))}
           </div>
         )}
+
+        <ReviewForm 
+          jobId={selectedJobForReview ?? 0}
+          isOpen={selectedJobForReview !== null}
+          onClose={() => setSelectedJobForReview(null)}
+        />
       </main>
     </div>
   );

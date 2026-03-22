@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { ShieldCheck, Sun, Moon, Bell } from 'lucide-react';
+import { ShieldCheck, Sun, Moon, Bell, Gavel } from 'lucide-react';
 import { useTheme } from '@/context/ThemeProvider';
 import { useAccount, useReadContract, useWatchContractEvent } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/constants';
@@ -68,6 +68,9 @@ export default function Navbar() {
           <Link href="/dashboard" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>Marketplace</Link>
           <Link href="/my-jobs" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>My Jobs</Link>
           <Link href="/my-payments" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>Payments</Link>
+          <Link href="/courthouse" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-red-500 transition-colors flex items-center gap-1`}>
+            <Gavel className="w-3 h-3" /> Courthouse
+          </Link>
           <Link href="/blogs" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>Blogs</Link>
           <Link href="/profile" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>Profile</Link>
         </div>

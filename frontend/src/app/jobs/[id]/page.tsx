@@ -8,7 +8,7 @@ import { formatEther, parseEther } from 'viem';
 import Navbar from '@/components/Navbar';
 import { 
   Loader2, ArrowLeft, ShieldCheck, Mail, User, Info, DollarSign, 
-  UserPlus, Wallet, Send, Check, Plus, Trash2, ExternalLink, PartyPopper 
+  UserPlus, Wallet, Send, Check, Plus, Trash2, ExternalLink, PartyPopper, X 
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -23,8 +23,18 @@ export default function JobDetails() {
   
   // Bid Form state
   const [bidAmountUSD, setBidAmountUSD] = useState('');
+  const [bidDuration, setBidDuration] = useState('7');
   const [bidText, setBidText] = useState('');
   const [workLinks, setWorkLinks] = useState<string[]>(['']);
+  
+  // Extension Modal state
+  const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
+  const [extDays, setExtDays] = useState('7');
+  const [extReason, setExtReason] = useState('');
+
+  // Dispute Modal state
+  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
+  const [disputeEvidence, setDisputeEvidence] = useState('');
   
   // Funding state
   const [tipUSD, setTipUSD] = useState('0');
@@ -70,6 +80,7 @@ export default function JobDetails() {
       // Reset form if it was a bid
       if (!job || (job as any)[4] === 0) {
         setBidAmountUSD('');
+        setBidDuration('7');
         setBidText('');
         setWorkLinks(['']);
       }
@@ -83,7 +94,7 @@ export default function JobDetails() {
   if (isJobLoading) return <div className="min-h-screen bg-mesh flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-blue-500" /></div>;
   if (jobError || !job || (job as any)[5] === "") return <div className="min-h-screen bg-mesh text-center pt-32"><Navbar /><h2 className="text-2xl font-bold text-red-400 capitalize tracking-tighter">Project Not Found</h2><Link href="/dashboard" className="text-blue-400 mt-4 inline-block font-black uppercase tracking-widest text-[10px]">Back to Marketplace</Link></div>;
 
-  const [jobId, client, freelancer, amount, status, title, description, category, skills] = (job as any);
+  const [jobId, client, freelancer, amount, status, title, description, category, skills, durationInDays, deadline, extensionRequestDays, extensionReason, hasExtensionRequest] = (job as any);
   const isClient = address?.toLowerCase() === client.toLowerCase();
   const isFreelancerFound = address?.toLowerCase() === freelancer.toLowerCase();
 
@@ -109,22 +120,22 @@ export default function JobDetails() {
   };
 
   const handleSubmitBid = () => {
-    if (!bidAmountUSD || !bidText) return;
+    if (!bidAmountUSD || !bidText || !bidDuration) return;
     const filteredLinks = workLinks.filter(link => link.trim() !== '');
     writeContract({
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: 'submitQuote',
-      args: [jobId, BigInt(bidAmountUSD), bidText, filteredLinks],
+      args: [jobId, BigInt(bidAmountUSD), BigInt(bidDuration), bidText, filteredLinks],
     });
   };
 
-  const handleHire = (freelancerAddress: string) => {
+  const handleHire = (freelancerAddress: string, quoteId: bigint) => {
     writeContract({
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: 'assignFreelancer',
-      args: [jobId, freelancerAddress as `0x${string}`],
+      args: [jobId, freelancerAddress as `0x${string}`, quoteId],
     });
   };
 
@@ -144,6 +155,37 @@ export default function JobDetails() {
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: 'completeJob',
+      args: [jobId],
+    });
+  };
+
+  const handleRequestExtension = () => {
+    if (!extDays || !extReason) return;
+    writeContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'requestExtension',
+      args: [jobId, BigInt(extDays), extReason],
+    });
+    setIsExtensionModalOpen(false);
+  };
+
+  const handleRaiseDispute = () => {
+    if (!disputeEvidence) return;
+    writeContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'raiseDispute',
+      args: [BigInt(id as string), disputeEvidence],
+    });
+    setIsDisputeModalOpen(false);
+  };
+
+  const handleApproveExtension = () => {
+    writeContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'approveExtension',
       args: [jobId],
     });
   };
@@ -213,11 +255,16 @@ export default function JobDetails() {
                           <div>
                             <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">${Number(quote.amountUSD)} USD</span>
                             <span className="text-slate-500 dark:text-slate-500 text-sm ml-2">≈ {(Number(quote.amountUSD) * USD_TO_ETH_RATE).toFixed(4)} ETH</span>
-                            <div className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-1">
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                                {Number(quote.durationInDays)} Days Timeline
+                              </span>
+                            </div>
+                            <div className="text-[10px] font-mono text-slate-500 mt-2 flex items-center gap-1">
                               <User className="w-3 h-3" /> {quote.freelancer}
                             </div>
                           </div>
-                          <button onClick={() => handleHire(quote.freelancer)} disabled={isPending || isConfirming} className="btn-primary py-2 px-6 text-sm flex items-center gap-2">
+                          <button onClick={() => handleHire(quote.freelancer, quote.id)} disabled={isPending || isConfirming} className="btn-primary py-2 px-6 text-sm flex items-center gap-2">
                             {isPending || isConfirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" /> Hire</>}
                           </button>
                         </div>
@@ -252,6 +299,12 @@ export default function JobDetails() {
                       </div>
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Timeline (Days)</label>
+                      <div className="relative">
+                        <input type="number" placeholder="7" className="w-full !bg-white dark:!bg-slate-900 border-2 border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 focus:border-blue-500 outline-none text-slate-900 dark:text-white font-bold" value={bidDuration} onChange={(e) => setBidDuration(e.target.value)} />
+                      </div>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Previous Work Links (Max 5)</label>
                       <div className="space-y-2">
                         {workLinks.map((link, idx) => (
@@ -279,56 +332,144 @@ export default function JobDetails() {
 
           <div className="lg:col-span-4 space-y-6">
             <div className="glass-card">
-              <div className="mb-6">
-                <span className="text-sm text-slate-500 block mb-1">Status</span>
-                <div className="mt-1">
-                  {status === 0 && <span className="px-4 py-1.5 bg-blue-500/10 text-blue-400 rounded-full text-sm font-bold border border-blue-500/20 block text-center">Bidding</span>}
-                  {status === 1 && <span className="px-4 py-1.5 bg-yellow-500/10 text-yellow-500 rounded-full text-sm font-bold border border-yellow-500/20 block text-center">Assigned</span>}
-                  {status === 2 && <span className="px-4 py-1.5 bg-purple-500/10 text-purple-400 rounded-full text-sm font-bold border border-purple-500/20 block text-center">Funded</span>}
-                  {status === 3 && <span className="px-4 py-1.5 bg-green-500/10 text-green-400 rounded-full text-sm font-bold border border-green-500/20 block text-center">Completed</span>}
-                </div>
-              </div>
+              {(isClient || isFreelancerFound) ? (
+                <>
+                  <div className="mb-6">
+                    <span className="text-sm text-slate-500 block mb-1">Status</span>
+                    <div className="mt-1">
+                      {status === 0 && <span className="px-4 py-1.5 bg-blue-500/10 text-blue-400 rounded-full text-sm font-bold border border-blue-500/20 block text-center">Bidding</span>}
+                      {status === 1 && <span className="px-4 py-1.5 bg-yellow-500/10 text-yellow-500 rounded-full text-sm font-bold border border-yellow-500/20 block text-center">Assigned</span>}
+                      {status === 2 && <span className="px-4 py-1.5 bg-purple-500/10 text-purple-400 rounded-full text-sm font-bold border border-purple-500/20 block text-center">Funded</span>}
+                      {status === 3 && <span className="px-4 py-1.5 bg-green-500/10 text-green-400 rounded-full text-sm font-bold border border-green-500/20 block text-center">Completed</span>}
+                      {status === 5 && <span className="px-4 py-1.5 bg-red-500/10 text-red-500 rounded-full text-sm font-bold border border-red-500/20 block text-center uppercase tracking-tighter">Under Dispute</span>}
+                    </div>
+                  </div>
 
-              <div className="mb-8">
-                <span className="text-sm text-slate-500 block mb-1">Agreed Budget</span>
-                <div className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-                  <DollarSign className="w-7 h-7" /> {status > 1 ? Number(formatEther(amount)).toFixed(7) : '0.0000000'} ETH
+                  <div className="mb-8">
+                    <span className="text-sm text-slate-500 block mb-1">Agreed Budget</span>
+                    <div className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                      <DollarSign className="w-7 h-7" /> {status > 1 ? Number(formatEther(amount)).toFixed(7) : '0.0000000'} ETH
+                    </div>
+                    {status === 1 && <p className="text-[10px] text-yellow-600 dark:text-yellow-500 mt-1">Waiting for funding...</p>}
+                  </div>
+                </>
+              ) : (
+                <div className="mb-6">
+                  <span className="text-sm text-slate-500 block mb-1">Status</span>
+                  <div className="mt-1">
+                    {status === 0 && <span className="px-4 py-1.5 bg-blue-500/10 text-blue-400 rounded-full text-sm font-bold border border-blue-500/20 block text-center">Bidding</span>}
+                    {status === 1 && <span className="px-4 py-1.5 bg-yellow-500/10 text-yellow-500 rounded-full text-sm font-bold border border-yellow-500/20 block text-center">Assigned</span>}
+                    {status === 2 && <span className="px-4 py-1.5 bg-purple-500/10 text-purple-400 rounded-full text-sm font-bold border border-purple-500/20 block text-center">Funded</span>}
+                    {status === 3 && <span className="px-4 py-1.5 bg-green-500/10 text-green-400 rounded-full text-sm font-bold border border-green-500/20 block text-center">Completed</span>}
+                    {status === 5 && <span className="px-4 py-1.5 bg-red-500/10 text-red-500 rounded-full text-sm font-bold border border-red-500/20 block text-center uppercase tracking-tighter">Under Dispute</span>}
+                  </div>
                 </div>
-                {status === 1 && <p className="text-[10px] text-yellow-600 dark:text-yellow-500 mt-1">Waiting for funding...</p>}
-              </div>
+              )}
 
-              <div className="space-y-3">
-                {isClient && status === 1 && (
-                  <div className="space-y-4 pt-4 border-t border-black/5 dark:border-white/10">
-                    <div className="p-4 bg-black/5 dark:bg-white/5 rounded-xl space-y-3">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Proposal Price:</span>
-                        <span className="text-slate-900 dark:text-white">${basePriceUSD}</span>
+              {/* Dispute Status Section */}
+              {status === 5 && (
+                <div className="mb-8 p-4 bg-red-500/5 border border-red-500/10 rounded-xl">
+                  <span className="text-[10px] text-red-500 uppercase tracking-widest font-black block mb-2">Arbitration Active</span>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+                    A dispute has been raised for this project. Jurors are currently reviewing the evidence and voting on a resolution.
+                  </p>
+                  <Link 
+                    href="/courthouse" 
+                    className="text-[10px] font-black uppercase text-blue-500 hover:underline flex items-center gap-1"
+                  >
+                    View in Courthouse <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+              )}
+
+              {(isClient || isFreelancerFound) && status >= 2 && (
+                <div className="mb-8 p-4 bg-slate-50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black block mb-2">Project Timeline</span>
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <span className="text-2xl font-black text-black dark:text-white">
+                        {Math.ceil((Number(deadline) - Math.floor(Date.now() / 1000)) / 86400)}
+                      </span>
+                      <span className="text-xs text-slate-500 ml-1 font-bold">Days Left</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">Deadline</span>
+                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                        {new Date(Number(deadline) * 1000).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Extension Status */}
+                  {hasExtensionRequest && (
+                    <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <p className="text-[10px] text-blue-500 font-black uppercase mb-1">Extension Requested</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 font-bold">+{Number(extensionRequestDays)} days requested</p>
+                      <div className="mt-2 p-2 bg-white/50 dark:bg-black/20 rounded border border-blue-500/10">
+                        <p className="text-[9px] text-slate-500 uppercase font-bold mb-1">Reason</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 italic">"{extensionReason}"</p>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-500">Add Tip (USD):</span>
-                         <div className="relative w-28">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold">$</span>
-                          <input type="number" className="w-full !bg-white dark:!bg-slate-900 border-2 border-slate-200 dark:border-white/10 rounded-lg px-6 py-2 text-sm text-right text-slate-900 dark:text-white font-black" value={tipUSD} onChange={(e) => setTipUSD(e.target.value)} />
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-sm font-bold pt-2 border-t border-black/5 dark:border-white/5">
-                        <span className="text-blue-600 dark:text-blue-400">Total:</span>
-                        <span className="text-blue-600 dark:text-blue-400">${totalUSD} ≈ {totalETH} ETH</span>
+                      {isClient && (
+                         <button onClick={handleApproveExtension} disabled={isPending || isConfirming} className="mt-3 w-full py-2 bg-blue-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20">
+                           Approve Extension
+                         </button>
+                      )}
+                    </div>
+                  )}
+
+                  {!hasExtensionRequest && isFreelancerFound && status === 2 && (
+                    <button 
+                      onClick={() => setIsExtensionModalOpen(true)} 
+                      disabled={isPending || isConfirming} 
+                      className="mt-4 w-full py-2 border-2 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase rounded-lg hover:border-blue-500 hover:text-blue-500 transition-all font-mono"
+                    >
+                      Request Extension
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {(isClient || isFreelancerFound) && status === 2 && (
+                <button 
+                  onClick={() => setIsDisputeModalOpen(true)}
+                  className="w-full py-4 text-red-500 text-[10px] font-black uppercase tracking-widest border-2 border-red-500/20 rounded-2xl hover:bg-red-500/5 transition-all"
+                >
+                  Flag for Dispute
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {isClient && status === 1 && (
+                <div className="space-y-4 pt-4 border-t border-black/5 dark:border-white/10">
+                  <div className="p-4 bg-black/5 dark:bg-white/5 rounded-xl space-y-3">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Proposal Price:</span>
+                      <span className="text-slate-900 dark:text-white">${basePriceUSD}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500">Add Tip (USD):</span>
+                       <div className="relative w-28">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold">$</span>
+                        <input type="number" className="w-full !bg-white dark:!bg-slate-900 border-2 border-slate-200 dark:border-white/10 rounded-lg px-6 py-2 text-sm text-right text-slate-900 dark:text-white font-black" value={tipUSD} onChange={(e) => setTipUSD(e.target.value)} />
                       </div>
                     </div>
-                    <button onClick={handleFund} disabled={isPending || isConfirming} className="btn-primary w-full py-4 flex items-center justify-center gap-2">
-                      <Wallet className="w-5 h-5" /> {isPending || isConfirming ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Fund & Start Project'}
-                    </button>
+                    <div className="flex justify-between text-sm font-bold pt-2 border-t border-black/5 dark:border-white/5">
+                      <span className="text-blue-600 dark:text-blue-400">Total:</span>
+                      <span className="text-blue-600 dark:text-blue-400">${totalUSD} ≈ {totalETH} ETH</span>
+                    </div>
                   </div>
-                )}
-
-                {isClient && status === 2 && (
-                  <button onClick={handleComplete} disabled={isPending || isConfirming} className="btn-secondary w-full py-4 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center gap-2">
-                    <ShieldCheck className="w-5 h-5" /> {isPending || isConfirming ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Delivery & Pay'}
+                  <button onClick={handleFund} disabled={isPending || isConfirming} className="btn-primary w-full py-4 flex items-center justify-center gap-2">
+                    <Wallet className="w-5 h-5" /> {isPending || isConfirming ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Fund & Start Project'}
                   </button>
-                )}
-              </div>
+                </div>
+              )}
+
+              {isClient && status === 2 && (
+                <button onClick={handleComplete} disabled={isPending || isConfirming} className="btn-secondary w-full py-4 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center gap-2">
+                  <ShieldCheck className="w-5 h-5" /> {isPending || isConfirming ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Delivery & Pay'}
+                </button>
+              )}
             </div>
 
             <div className="glass-card">
@@ -344,6 +485,106 @@ export default function JobDetails() {
         {/* Workspace Chat - Only visible if Funded/Completed and user is participant */}
         {status >= 2 && (
           <WorkspaceChat jobId={Number(id)} client={client} freelancer={freelancer} />
+        )}
+
+        {/* Extension Request Modal */}
+        {isExtensionModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="w-full max-w-md p-8 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/10 shadow-2xl animate-in zoom-in duration-300">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-black uppercase tracking-tighter text-black dark:text-white">Request Extension</h2>
+                <button onClick={() => setIsExtensionModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors">
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Additional Days</label>
+                  <input 
+                    type="number" 
+                    value={extDays}
+                    onChange={(e) => setExtDays(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-black dark:text-white outline-none focus:border-blue-500 transition-all font-mono"
+                    placeholder="e.g. 7"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Reason for Extension</label>
+                  <textarea 
+                    value={extReason}
+                    onChange={(e) => setExtReason(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-black dark:text-white outline-none focus:border-blue-500 transition-all min-h-[100px] font-mono"
+                    placeholder="Explain why you need more time..."
+                  />
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsExtensionModalOpen(false)}
+                    className="flex-1 py-4 border-2 border-slate-200 dark:border-white/10 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-white/5 transition-all active:scale-[0.98]"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleRequestExtension}
+                    disabled={isPending || isConfirming || !extDays || !extReason}
+                    className="flex-[2] py-4 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {isPending || isConfirming ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sumbit on-chain'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dispute Request Modal */}
+        {isDisputeModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="w-full max-w-md p-8 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/10 shadow-2xl animate-in zoom-in duration-300">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-black uppercase tracking-tighter text-red-500">Raise Dispute</h2>
+                <button onClick={() => setIsDisputeModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors">
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-xl">
+                  <p className="text-[10px] text-red-600 font-bold leading-tight">
+                    Raising a dispute will lock the project funds and transfer the decision power to decentralized Jurors. This action cannot be undone.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Evidence Link (IPFS, Chat Log, etc.)</label>
+                  <input 
+                    type="text" 
+                    value={disputeEvidence}
+                    onChange={(e) => setDisputeEvidence(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-black dark:text-white outline-none focus:border-red-500 transition-all font-mono"
+                    placeholder="ipfs://..."
+                  />
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsDisputeModalOpen(false)}
+                    className="flex-1 py-4 border-2 border-slate-200 dark:border-white/10 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-white/5 transition-all active:scale-[0.98]"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleRaiseDispute}
+                    disabled={isPending || isConfirming || !disputeEvidence}
+                    className="flex-[2] py-4 bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl shadow-red-500/20 active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {isPending || isConfirming ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Dispute'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>

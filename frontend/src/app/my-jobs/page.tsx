@@ -5,13 +5,15 @@ import { useReadContract, useAccount } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/constants';
 import Navbar from '@/components/Navbar';
 import JobCard from '@/components/JobCard';
-import { Loader2, Briefcase, UserCheck, Search, Filter } from 'lucide-react';
+import { Loader2, Briefcase, UserCheck, Search, Filter, Star } from 'lucide-react';
 import Link from 'next/link';
+import ReviewForm from '@/components/ReviewForm';
 
 export default function MyJobs() {
   const { address, isConnected } = useAccount();
   const [activeTab, setActiveTab] = useState<'hired' | 'posted'>('hired');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedJobForReview, setSelectedJobForReview] = useState<number | null>(null);
 
   const { data: jobs, isLoading, error } = useReadContract({
     address: CONTRACT_ADDRESS,
@@ -111,10 +113,20 @@ export default function MyJobs() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {filteredJobs.map((job) => (
-              <JobCard key={Number(job.id)} job={job} />
+              <JobCard 
+                key={Number(job.id)} 
+                job={job} 
+                onRate={(jobId) => setSelectedJobForReview(jobId)}
+              />
             ))}
           </div>
         )}
+
+        <ReviewForm 
+          jobId={selectedJobForReview ?? 0}
+          isOpen={selectedJobForReview !== null}
+          onClose={() => setSelectedJobForReview(null)}
+        />
       </main>
     </div>
   );
