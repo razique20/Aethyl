@@ -25,7 +25,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-10 font-medium">
-            Secure, transparent, and decentralized. Aethyl uses blockchain escrow 
+            Secure, transparent, and decentralized. FrethiX (powered by Aethyl) uses blockchain escrow 
             smart contracts to ensure you get paid for every milestone.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

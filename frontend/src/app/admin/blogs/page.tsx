@@ -9,7 +9,7 @@ export default function AdminBlogs() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [author, setAuthor] = useState('Aethyl Team');
+  const [author, setAuthor] = useState('FrethiX Team');
   const [category, setCategory] = useState('Tech');
   const [imageURL, setImageURL] = useState('https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=2232');
 
@@ -33,7 +33,7 @@ export default function AdminBlogs() {
     setEditingId(null);
     setTitle('');
     setContent('');
-    setAuthor('Aethyl Team');
+    setAuthor('FrethiX Team');
     setCategory('Tech');
     setImageURL('https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=2232');
   }

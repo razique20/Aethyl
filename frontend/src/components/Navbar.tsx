@@ -60,7 +60,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
           <span className="text-2xl font-extrabold tracking-tighter bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-            Aethyl
+            FrethiX
           </span>
         </Link>
 

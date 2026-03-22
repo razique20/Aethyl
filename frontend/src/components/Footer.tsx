@@ -36,7 +36,7 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-6 group">
               <span className="text-2xl font-extrabold tracking-tighter bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                Aethyl
+                FrethiX
               </span>
             </Link>
             <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm font-medium leading-relaxed">
@@ -103,8 +103,8 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-black/5 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm font-medium">
-            <span>© 2026 Aethyl. Built on</span>
-            <span className="font-bold text-blue-600 dark:text-blue-400">Ethereum</span>
+            <span>© 2026 FrethiX. A product of</span>
+            <span className="font-bold text-blue-600 dark:text-blue-400">Aethyl</span>
           </div>
           
           <div className="flex gap-8 text-xs font-black uppercase tracking-widest text-slate-400">

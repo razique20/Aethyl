@@ -23,7 +23,7 @@ export default function BlogsPage() {
       <main className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center mb-20 animate-in fade-in slide-in-from-top-4 duration-700">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/10 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-blue-600/20">
-            <Newspaper className="w-3.5 h-3.5" /> Aethyl Journal
+            <Newspaper className="w-3.5 h-3.5" /> FrethiX Journal
           </div>
           <h1 className="text-6xl md:text-8xl font-black text-black dark:text-white mb-6 uppercase tracking-tighter leading-none">
             Our Insightful <br /> <span className="text-blue-600">Community</span>
@@ -55,7 +55,7 @@ export default function BlogsPage() {
            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/10 to-transparent opacity-50 dark:from-blue-600/20" />
            <div className="relative z-10 max-w-2xl mx-auto">
               <h2 className="text-4xl font-black mb-6 uppercase tracking-tighter text-black dark:text-white">Stay in the Loop</h2>
-              <p className="text-slate-600 dark:text-slate-400 mb-10 font-medium">Get the latest Aethyl updates and industry insights delivered straight to your inbox.</p>
+              <p className="text-slate-600 dark:text-slate-400 mb-10 font-medium">Get the latest FrethiX updates and industry insights delivered straight to your inbox.</p>
               <div className="flex flex-col sm:flex-row gap-4">
                  <input 
                     type="email" 

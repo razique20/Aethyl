@@ -14,7 +14,7 @@ import { useTheme } from '@/context/ThemeProvider';
 import '@rainbow-me/rainbowkit/styles.css';
 
 const config = getDefaultConfig({
-  appName: 'Aethyl',
+  appName: 'FrethiX',
   projectId: 'YOUR_PROJECT_ID', // Replace with your WalletConnect Project ID
   chains: [sepolia, hardhat, mainnet],
   transports: {

@@ -13,7 +13,7 @@ async function main() {
   await escrow.waitForDeployment();
   const address = await escrow.getAddress();
 
-  console.log("Aethyl deployed to:", address);
+  console.log("FrethiX (Aethyl contract) deployed to:", address);
 }
 
 main().catch((error) => {

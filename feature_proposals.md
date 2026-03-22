@@ -1,6 +1,6 @@
-# 🌌 Aethyl Future Feature Roadmap
+# 🌌 FrethiX Future Feature Roadmap
 
-Based on the current architecture (Next.js 15, Tailwind v4, Solidity Escrow), here are several high-impact features that can be added to enhance the platform.
+Based on the current architecture (Next.js 15, Tailwind v4, Solidity Escrow), here are several high-impact features that can be added to enhance FrethiX (powered by Aethyl).
 
 ## 🌟 1. Reputation & Trust System
 *   **On-Chain Ratings**: Allow clients and freelancers to rate each other (1–5 stars) and leave text reviews upon job completion.

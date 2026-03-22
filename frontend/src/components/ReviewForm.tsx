@@ -58,7 +58,7 @@ export default function ReviewForm({ jobId, isOpen, onClose, onSuccess }: { jobI
             <Star className="w-10 h-10 text-green-500 fill-green-500" />
           </div>
           <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 text-slate-900 dark:text-slate-900">Review Submitted!</h2>
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Your feedback helps the Aethyl community thrive.</p>
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Your feedback helps the FrethiX community thrive.</p>
         </div>
       </div>
     );

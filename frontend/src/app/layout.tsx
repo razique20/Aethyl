@@ -21,8 +21,8 @@ const cursive = Dancing_Script({
 });
 
 export const metadata: Metadata = {
-  title: "Aethyl | Decentralized Freelance Marketplace",
-  description: "Secure escrow-backed freelance platform using Web3.",
+  title: "FrethiX | Decentralized Freelance Marketplace",
+  description: "Secure escrow-backed freelance platform by Aethyl using Web3.",
 };
 
 export default function RootLayout({

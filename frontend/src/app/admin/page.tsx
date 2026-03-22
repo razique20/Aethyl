@@ -41,7 +41,7 @@ export default function AdminDashboard() {
   return (
     <div className="p-10">
       <h1 className="text-4xl font-black mb-2 uppercase tracking-tighter">Overview</h1>
-      <p className="text-slate-500 dark:text-slate-400 font-medium mb-10">Welcome to the Aethyl decentralized command center.</p>
+      <p className="text-slate-500 dark:text-slate-400 font-medium mb-10">Welcome to the FrethiX decentralized command center.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         {stats.map((stat, i) => {

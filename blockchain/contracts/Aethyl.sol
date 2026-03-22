@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 /**
  * @title Aethyl
- * @dev A decentralized freelance platform with escrow-backed payments.
+ * @dev FrethiX is a decentralized freelance platform with escrow-backed payments (a product of Aethyl).
  * Includes a bidding system for freelancers, decentralized blogs, and admin moderation.
  */
 contract Aethyl {

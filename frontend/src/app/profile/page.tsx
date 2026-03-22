@@ -125,7 +125,7 @@ export default function Profile() {
   }
 
   const profile = profileData ? {
-    name: (profileData as any)[0] || 'Aethyl User',
+    name: (profileData as any)[0] || 'FrethiX User',
     bio: (profileData as any)[1] || 'No bio provided yet.',
     skills: (profileData as any)[2] || 'Not specified',
     location: (profileData as any)[3] || 'Decentralized Space',
