@@ -116,8 +116,9 @@ contract Aethyl {
 
     event JobCreated(uint256 jobId, address client, string title);
     event JobAssigned(uint256 jobId, address freelancer);
-    event JobFunded(uint256 jobId, uint256 amount);
-    event JobCompleted(uint256 jobId, address freelancer, uint256 amount);
+    event JobFunded(uint256 jobId, uint256 amountAdded);
+    event PaymentReleased(uint256 jobId, address freelancer, uint256 amount);
+    event JobCompleted(uint256 jobId, address freelancer, uint256 remainingAmount);
     event JobCanceled(uint256 jobId, address client);
     event QuoteSubmitted(uint256 jobId, address freelancer, uint256 amountUSD);
     event ProfileUpdated(address indexed user, string name);
@@ -277,12 +278,16 @@ contract Aethyl {
     function fundJob(uint256 _jobId) external payable notBanned {
         Job storage job = jobs[_jobId];
         require(job.client == msg.sender, "Only client can fund");
-        require(job.status == JobStatus.Assigned, "Job not assigned");
+        require(job.status == JobStatus.Assigned || job.status == JobStatus.Funded, "Job not assigned or funded");
         require(msg.value > 0, "No fund amount");
 
-        job.amount = msg.value;
+        job.amount += msg.value;
         job.status = JobStatus.Funded;
-        job.deadline = block.timestamp + (job.durationInDays * 1 days);
+        
+        // Only set deadline once on initial fund
+        if (job.deadline == 0) {
+            job.deadline = block.timestamp + (job.durationInDays * 1 days);
+        }
 
         emit JobFunded(_jobId, msg.value);
     }
@@ -320,7 +325,24 @@ contract Aethyl {
     }
 
     /**
-     * @dev Complete a job and release payment.
+     * @dev Release a partial payment (e.g., for a completed milestone).
+     */
+    function releasePayment(uint256 _jobId, uint256 _amount) external notBanned {
+        Job storage job = jobs[_jobId];
+        require(job.client == msg.sender, "Only client can release payment");
+        require(job.status == JobStatus.Funded, "Not funded");
+        require(job.amount >= _amount, "Insufficient escrow funds");
+
+        job.amount -= _amount;
+
+        (bool success, ) = payable(job.freelancer).call{value: _amount}("");
+        require(success, "Payment failed");
+
+        emit PaymentReleased(_jobId, job.freelancer, _amount);
+    }
+
+    /**
+     * @dev Complete a job and release any remaining payment.
      */
     function completeJob(uint256 _jobId) external notBanned {
         Job storage job = jobs[_jobId];
@@ -329,10 +351,14 @@ contract Aethyl {
 
         job.status = JobStatus.Completed;
         uint256 payment = job.amount;
+        job.amount = 0;
+        
         profiles[job.freelancer].completedJobs++;
 
-        (bool success, ) = payable(job.freelancer).call{value: payment}("");
-        require(success, "Payment failed");
+        if (payment > 0) {
+            (bool success, ) = payable(job.freelancer).call{value: payment}("");
+            require(success, "Payment failed");
+        }
 
         emit JobCompleted(_jobId, job.freelancer, payment);
     }

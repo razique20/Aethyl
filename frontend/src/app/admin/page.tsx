@@ -1,76 +1,184 @@
 'use client';
 
-import { useReadContract } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/constants';
-import { Users, Briefcase, FileText, Activity } from 'lucide-react';
+import Navbar from '@/components/Navbar';
+import { Shield, Users, Briefcase, DollarSign, Loader2, AlertTriangle, Wallet } from 'lucide-react';
 import { formatEther } from 'viem';
 
-export default function AdminDashboard() {
+export default function AdminPage() {
+  const { isConnected, address } = useAccount();
+
+  const { data: isAdmin } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'admins',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+
+  const { data: owner } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'owner',
+  });
+
+  const { data: allJobs, isLoading: jobsLoading } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'getAllJobs',
+  });
+
   const { data: allUsers } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'getAllUsers',
   });
 
-  const { data: allJobs } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'getAllJobs',
-  });
-
-  const { data: allBlogs } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'getAllBlogs',
-  });
-
-  const usersCount = (allUsers as any[])?.length || 0;
+  const isAuthorized = isAdmin || (owner && address && owner === address);
   const jobs = (allJobs as any[]) || [];
-  const blogsCount = (allBlogs as any[])?.length || 0;
+  const users = (allUsers as any[]) || [];
 
-  const totalVolume = jobs.reduce((acc, job) => acc + Number(formatEther(job.amount || BigInt(0))), 0);
-  const activeJobs = jobs.filter(j => j.status !== 3 && j.status !== 4).length;
+  // Stats
+  const totalJobs = jobs.length;
+  const fundedJobs = jobs.filter((j: any) => Number(j.status) >= 2).length;
+  const completedJobs = jobs.filter((j: any) => Number(j.status) === 3).length;
+  const totalEscrowed = jobs.reduce((sum: bigint, j: any) => sum + BigInt(j.amount || 0), BigInt(0));
 
-  const stats = [
-    { title: 'Registered Users', value: usersCount, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { title: 'Total Jobs Posted', value: jobs.length, icon: Briefcase, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-    { title: 'Active Jobs', value: activeJobs, icon: Activity, color: 'text-pink-500', bg: 'bg-pink-500/10' },
-    { title: 'Total Volume (ETH)', value: totalVolume.toFixed(4), icon: FileText, color: 'text-green-500', bg: 'bg-green-500/10' },
-  ];
+  const statusLabels = ['Created', 'Assigned', 'Funded', 'Completed', 'Canceled', 'Disputed'];
+  const statusColors = ['text-zinc-400', 'text-amber-400', 'text-cyan-400', 'text-emerald-400', 'text-red-400', 'text-orange-400'];
 
-  return (
-    <div className="p-10">
-      <h1 className="text-4xl font-black mb-2 uppercase tracking-tighter">Overview</h1>
-      <p className="text-slate-500 dark:text-slate-400 font-medium mb-10">Welcome to the FrethiX decentralized command center.</p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <div key={i} className="bg-white dark:bg-white/5 rounded-[2rem] p-8 border border-slate-200 dark:border-white/10 shadow-xl shadow-slate-200/50 dark:shadow-none">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${stat.bg}`}>
-                <Icon className={`w-7 h-7 ${stat.color}`} />
-              </div>
-              <p className="text-slate-500 dark:text-slate-400 font-bold text-sm uppercase tracking-wider mb-2">{stat.title}</p>
-              <h3 className="text-4xl font-black tracking-tighter">{stat.value}</h3>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="bg-white dark:bg-white/5 rounded-[2rem] p-8 border border-slate-200 dark:border-white/10 shadow-xl shadow-slate-200/50 dark:shadow-none">
-        <h2 className="text-2xl font-black mb-6 uppercase tracking-tighter">System Health</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-white/5">
-            <span className="font-bold text-slate-600 dark:text-slate-400">Total Blogs Published</span>
-            <span className="font-black text-xl">{blogsCount}</span>
-          </div>
-          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-white/5">
-            <span className="font-bold text-slate-600 dark:text-slate-400">Escrow Contract Status</span>
-            <span className="font-bold text-green-500 px-3 py-1 bg-green-500/10 rounded-full text-xs uppercase tracking-widest">Active & Secure</span>
-          </div>
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-mesh bg-grid">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center pt-32 text-center">
+          <Wallet className="w-12 h-12 text-violet-600 mb-6" />
+          <h2 className="text-3xl font-extrabold mb-3 text-zinc-900">Connect Wallet</h2>
+          <p className="text-zinc-600 max-w-md">Admin access requires a connected wallet.</p>
         </div>
       </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-mesh bg-grid">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center pt-32 text-center">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mb-6" />
+          <h2 className="text-3xl font-extrabold mb-3 text-zinc-900">Access Denied</h2>
+          <p className="text-zinc-600 max-w-md">Your wallet is not authorized as an admin.</p>
+          <p className="text-xs text-zinc-500 mt-4 font-mono">{address}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-mesh bg-grid">
+      <Navbar />
+
+      <main className="max-w-7xl mx-auto px-6 py-12">
+        {/* Header */}
+        <div className="mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/20 bg-amber-500/5 text-amber-400 text-xs font-medium mb-2">
+            <Shield className="w-3 h-3" />
+            Admin Panel
+          </div>
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+            Platform <span className="gradient-text">Overview</span>
+          </h1>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <div className="glass-card">
+            <Briefcase className="w-5 h-5 text-violet-600 mb-3" />
+            <p className="text-2xl font-extrabold text-zinc-900">{totalJobs}</p>
+            <p className="text-xs text-zinc-600 mt-1">Total Jobs</p>
+          </div>
+          <div className="glass-card">
+            <DollarSign className="w-5 h-5 text-emerald-600 mb-3" />
+            <p className="text-2xl font-extrabold text-zinc-900">
+              {totalEscrowed > 0 ? `${parseFloat(formatEther(totalEscrowed)).toFixed(4)} ETH` : '0 ETH'}
+            </p>
+            <p className="text-xs text-zinc-600 mt-1">Total Escrowed</p>
+          </div>
+          <div className="glass-card">
+            <Users className="w-5 h-5 text-cyan-600 mb-3" />
+            <p className="text-2xl font-extrabold text-zinc-900">{users.length}</p>
+            <p className="text-xs text-zinc-600 mt-1">Registered Users</p>
+          </div>
+          <div className="glass-card">
+            <Shield className="w-5 h-5 text-fuchsia-600 mb-3" />
+            <p className="text-2xl font-extrabold text-zinc-900">{completedJobs}</p>
+            <p className="text-xs text-zinc-600 mt-1">Completed</p>
+          </div>
+        </div>
+
+        {/* On-Chain Jobs Table */}
+        <div className="glow-card">
+          <h2 className="text-lg font-bold text-zinc-900 mb-6">On-Chain Jobs</h2>
+          {jobsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-violet-500" />
+            </div>
+          ) : jobs.length === 0 ? (
+            <p className="text-zinc-600 text-sm text-center py-8">No on-chain jobs yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-zinc-600 border-b border-zinc-200">
+                    <th className="pb-3 font-medium">ID</th>
+                    <th className="pb-3 font-medium">Title</th>
+                    <th className="pb-3 font-medium">Client</th>
+                    <th className="pb-3 font-medium">Status</th>
+                    <th className="pb-3 font-medium text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200">
+                  {jobs.map((job: any, i: number) => (
+                    <tr key={i} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 text-zinc-500">#{Number(job.id)}</td>
+                      <td className="py-3 text-zinc-900 font-medium">{job.title || 'Untitled'}</td>
+                      <td className="py-3 text-zinc-500 font-mono text-xs">
+                        {job.client?.slice(0, 6)}...{job.client?.slice(-4)}
+                      </td>
+                      <td className="py-3">
+                        <span className={`text-xs font-semibold ${statusColors[Number(job.status)] || 'text-zinc-400'}`}>
+                          {statusLabels[Number(job.status)] || 'Unknown'}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right text-zinc-900 font-medium">
+                        {BigInt(job.amount || 0) > 0 ? `${parseFloat(formatEther(BigInt(job.amount))).toFixed(4)} ETH` : '--'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Registered Users */}
+        {users.length > 0 && (
+          <div className="glow-card mt-6">
+            <h2 className="text-lg font-bold text-zinc-900 mb-6">Registered Users</h2>
+            <div className="space-y-2">
+              {users.map((addr: string, i: number) => (
+                <div key={i} className="flex items-center justify-between py-2 border-b border-zinc-200 last:border-0">
+                  <span className="text-sm text-zinc-600 font-mono">{addr}</span>
+                  <span className={`text-xs font-semibold ${addr === owner ? 'text-amber-500' : 'text-zinc-500'}`}>
+                    {addr === owner ? 'Owner' : 'User'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

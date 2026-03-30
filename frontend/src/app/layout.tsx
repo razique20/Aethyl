@@ -1,28 +1,25 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Outfit, Dancing_Script } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Web3Provider } from "@/components/Web3Provider";
 import { ThemeProvider } from "@/context/ThemeProvider";
-import Footer from "@/components/Footer";
+import { AuthProvider } from "@/context/AuthContext";
 
-const sans = Plus_Jakarta_Sans({
+const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
 });
 
-const outfit = Outfit({
+const spaceGrotesk = Space_Grotesk({
   variable: "--font-heading",
   subsets: ["latin"],
 });
 
-const cursive = Dancing_Script({
-  variable: "--font-cursive",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "FrethiX | Decentralized Freelance Marketplace",
-  description: "Secure escrow-backed freelance platform by Aethyl using Web3.",
+  title: "FrethiX | AI-Powered Hiring with Smart Contract Escrow",
+  description:
+    "AI that hires and pays freelancers automatically using blockchain smart contracts. Describe your project, get matched instantly, pay securely.",
+  keywords: ["AI hiring", "freelance", "blockchain escrow", "smart contracts", "Web3"],
 };
 
 export default function RootLayout({
@@ -33,16 +30,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${sans.variable} ${outfit.variable} ${cursive.variable} antialiased bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-300 flex flex-col text-[14px] leading-relaxed`}
+        className={`${inter.variable} ${spaceGrotesk.variable} antialiased min-h-screen font-[family-name:var(--font-sans)]`}
       >
-        <ThemeProvider>
-          <Web3Provider>
-            <div className="flex-grow">
+        <AuthProvider>
+          <ThemeProvider>
+            <Web3Provider>
               {children}
-            </div>
-            <Footer />
-          </Web3Provider>
-        </ThemeProvider>
+            </Web3Provider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -2,125 +2,110 @@
 
 import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { ShieldCheck, Sun, Moon, Bell, Gavel } from 'lucide-react';
-import { useTheme } from '@/context/ThemeProvider';
-import { useAccount, useReadContract, useWatchContractEvent } from 'wagmi';
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/constants';
+import { Brain, LayoutDashboard, Shield, Sparkles, Menu, X, LogOut, LogIn } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
-  const { theme, toggleTheme } = useTheme();
-  const { address } = useAccount();
-  const [showNotif, setShowNotif] = useState(false);
-  const [liveAlerts, setLiveAlerts] = useState<any[]>([]);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, logout, loading } = useAuth();
 
-  // Fetch specific user notifications (Warnings, Success, etc sent by Admin)
-  const { data: notifications } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'getNotifications',
-    args: address ? [address] : undefined,
-    query: {
-       enabled: !!address,
-    }
-  });
-
-  // Listen globally to New Jobs being created on the platform
-  useWatchContractEvent({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    eventName: 'JobCreated',
-    onLogs(logs) {
-      logs.forEach((log: any) => {
-        // Prevent notifying the user about their own created job
-        if (log.args.client !== address) {
-            const newAlert = {
-              message: `New Escrow Job Posted: "${log.args.title}"`,
-              notifType: 'NEW JOB',
-              timestamp: Math.floor(Date.now() / 1000)
-            };
-            
-            // Add live alert and flash the notification box if viewing
-            setLiveAlerts(prev => {
-              const exists = prev.find(a => a.message === newAlert.message);
-              return exists ? prev : [newAlert, ...prev];
-            });
-        }
-      });
-    },
-  });
-
-  // Merge live blockchain events with personal static notifications
-  const allNotifs = [...liveAlerts, ...((notifications as any[]) || [])].sort(
-     (a, b) => Number(b.timestamp) - Number(a.timestamp)
-  );
+  const NAV_LINKS = [
+    { href: '/hire', label: 'AI Hire', icon: Sparkles, requireClient: true },
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/profile', label: 'Profile', icon: Brain },
+    { href: '/admin', label: 'Admin', icon: Shield },
+  ];
 
   return (
-    <nav className="sticky top-0 z-50 w-full glass border-b border-black/5 dark:border-white/5 px-6 py-4 backdrop-blur-md transition-colors duration-300">
+    <nav className="sticky top-0 z-50 w-full px-6 py-4 glass border-b border-zinc-200">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 group">
-          <span className="text-2xl font-extrabold tracking-tighter bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-            FrethiX
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <span className="text-2xl font-extrabold tracking-tight">
+            <span className="text-zinc-900">Freth</span>
+            <span className="gradient-text">iX</span>
           </span>
         </Link>
 
-        <div className="hidden lg:flex items-center gap-10 font-black">
-          <Link href="/dashboard" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>Marketplace</Link>
-          <Link href="/my-jobs" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>My Jobs</Link>
-          <Link href="/my-payments" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>Payments</Link>
-          <Link href="/courthouse" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-red-500 transition-colors flex items-center gap-1`}>
-            <Gavel className="w-3 h-3" /> Courthouse
-          </Link>
-          <Link href="/blogs" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>Blogs</Link>
-          <Link href="/profile" className={`${theme === 'light' ? 'text-black' : 'text-white'} text-xs uppercase tracking-widest hover:text-blue-600 transition-colors`}>Profile</Link>
+        {/* Desktop Nav */}
+        <div className="hidden md:flex items-center gap-1">
+          {NAV_LINKS.map(({ href, label, icon: Icon, requireClient }) => {
+            // Hide "AI Hire" for freelancers to keep UX clean
+            if (requireClient && user?.role === 'freelancer') return null;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-all duration-300"
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </Link>
+            );
+          })}
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Global Notification Bell */}
-          <div className="relative">
-            <button 
-              onClick={() => setShowNotif(!showNotif)}
-              className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-black/5 dark:border-white/5 shadow-sm relative"
-            >
-              <Bell className="w-5 h-5" />
-              {allNotifs.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#020617]"></span>
-              )}
+        {/* Right side */}
+        <div className="flex items-center gap-3">
+          {!loading && !user && (
+            <Link href="/auth/login" className="btn-secondary text-sm px-4 py-2 flex items-center gap-2">
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </Link>
+          )}
+
+          {!loading && user && (
+            <button onClick={logout} className="btn-ghost text-sm px-4 py-2 flex items-center gap-2 text-red-400 hover:bg-red-500/10">
+              <LogOut className="w-4 h-4" />
+              Sign Out
             </button>
+          )}
 
-            {showNotif && (
-               <div className="absolute right-0 mt-4 w-80 bg-white dark:bg-[#020617] border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-4 z-[60] max-h-96 overflow-y-auto">
-                  <h3 className="font-black mb-4 pb-2 border-b border-slate-100 dark:border-white/10 text-black dark:text-white uppercase text-xs tracking-widest">Inbox</h3>
-                  {!allNotifs.length ? (
-                     <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center py-4 font-bold uppercase">Clear skies! No alerts.</p>
-                  ) : (
-                     <div className="space-y-3">
-                        {[...allNotifs].reverse().map((n: any, idx: number) => (
-                           <div key={idx} className={`p-3 rounded-xl border transition-all ${n.notifType === 'WARNING' ? 'bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20' : n.notifType === 'SUCCESS' ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/5'}`}>
-                              <p className={`text-[9px] font-black mb-1 opacity-70 uppercase tracking-widest ${n.notifType === 'WARNING' ? 'text-orange-600' : n.notifType === 'SUCCESS' ? 'text-green-600' : 'text-blue-600'}`}>{n.notifType}</p>
-                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">{n.message}</p>
-                              <p className="text-[8px] text-slate-400 mt-2 font-mono">{new Date(Number(n.timestamp)*1000).toLocaleDateString()}</p>
-                           </div>
-                        ))}
-                     </div>
-                  )}
-               </div>
-            )}
-          </div>
+          {/* Show Connect Wallet if logged in */}
+          {!loading && user && (
+            <ConnectButton
+              accountStatus="address"
+              showBalance={false}
+            />
+          )}
 
-          <button 
-            onClick={toggleTheme}
-            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-black/5 dark:border-white/5 shadow-sm"
-            aria-label="Toggle Theme"
+          {/* Mobile menu toggle */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="md:hidden p-2 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-all"
           >
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <ConnectButton 
-            accountStatus="address"
-            showBalance={false}
-          />
         </div>
       </div>
+
+      {/* Mobile Nav */}
+      {mobileOpen && (
+        <div className="md:hidden mt-3 pt-3 border-t border-zinc-200 space-y-1">
+          {NAV_LINKS.map(({ href, label, icon: Icon, requireClient }) => {
+            if (requireClient && user?.role === 'freelancer') return null;
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-all"
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </Link>
+            );
+          })}
+          
+          {!loading && !user && (
+            <Link href="/auth/login" className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-all">
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </Link>
+          )}
+        </div>
+      )}
     </nav>
   );
 }
